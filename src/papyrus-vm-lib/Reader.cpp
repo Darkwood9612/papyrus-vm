@@ -372,7 +372,7 @@ ObjectTable::Object::PropInfo Reader::FillProperty() {
 	prop.userFlags = Read32_bit();
 	prop.flags = Read8_bit();
 
-	if ((prop.flags & 4) != 0) { // she exists???
+	if ((prop.flags & 4) == prop.kFlags_AutoVar) { // it exists??
 		prop.autoVarName = this->structure->stringTable.m_data[Read16_bit()];
 	}
 	else prop.autoVarName;

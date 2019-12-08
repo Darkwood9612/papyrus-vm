@@ -9,12 +9,12 @@ void VirtualMachine::RegisterFunction(std::string className, std::string functio
 	switch (type) {
 	case FunctionType::GlobalFunction:
 
-		nativeStaticFunction[functionName] = fn;
+		nativeStaticFunctions[functionName] = fn;
 		break;
 	case FunctionType::Method:
 
 		std::pair<std::string, NativeFunction> item(std::make_pair(functionName, fn));
-		nativeFunction[className].push_back(item);
+		nativeFunctions[className].push_back(item);
 		break;
 	}
 }
@@ -40,9 +40,9 @@ void VirtualMachine::SendEvent(std::shared_ptr<IGameObject> self, const char* ev
 	for (auto& object : gameObjects) {
 		if (object.first == self) {
 			for (auto& scriptInstance : object.second) {
-				auto fn = scriptInstance.GetFunctionByName(eventName);
+				auto fn = scriptInstance.GetFunctionByName(eventName, scriptInstance.GetActiveStateName());
 				if (fn.valid) {
-					scriptInstance.StartFunction(fn, arguments, eventName);
+					scriptInstance.StartFunction(fn, arguments);
 				}
 			}
 		}
@@ -51,9 +51,9 @@ void VirtualMachine::SendEvent(std::shared_ptr<IGameObject> self, const char* ev
 
 void VirtualMachine::SendEvent(ActivePexInstance* instance, const char* eventName, std::vector<VarValue>& arguments) {
 
-				auto fn = instance->GetFunctionByName(eventName);
+				auto fn = instance->GetFunctionByName(eventName, instance->GetActiveStateName());
 				if (fn.valid) {
-					instance->StartFunction(fn, arguments, eventName);
+					instance->StartFunction(fn, arguments);
 				}
 }
 
@@ -66,10 +66,10 @@ VarValue VirtualMachine::CallMethod(ActivePexInstance* instance, IGameObject *se
 	if (methodName == nameGoToState || methodName == nameGetState) {
 		function = instance->GetFunctionByName(methodName, "");
 	}
-	else function = instance->GetFunctionByName(methodName);
+	else function = instance->GetFunctionByName(methodName, instance->GetActiveStateName());
 	
 	if (function.valid) {
-		return instance->StartFunction(function, arguments, methodName);
+		return instance->StartFunction(function, arguments);
 	}
 	assert(false);
 	return VarValue::None();
@@ -81,8 +81,8 @@ VarValue VirtualMachine::CallStatic(std::string className, std::string functionN
 
 
 	if (className != "") {
-		if (nativeFunction.find(className) != nativeFunction.end()) {
-			for (auto& function : nativeFunction[className]) {
+		if (nativeFunctions.find(className) != nativeFunctions.end()) {
+			for (auto& function : nativeFunctions[className]) {
 				if (function.first == functionName) {
 					NativeFunction func = function.second;
 					result = func(VarValue::None(), arguments);
@@ -91,8 +91,8 @@ VarValue VirtualMachine::CallStatic(std::string className, std::string functionN
 		}
 	}
 	else {
-		if (nativeStaticFunction.find(functionName) != nativeStaticFunction.end()) {
-			NativeFunction function = nativeStaticFunction[functionName];
+		if (nativeStaticFunctions.find(functionName) != nativeStaticFunctions.end()) {
+			NativeFunction function = nativeStaticFunctions[functionName];
 			result = function(VarValue::None(), arguments);
 		}
 	}

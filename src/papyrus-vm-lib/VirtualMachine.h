@@ -11,8 +11,8 @@
 
 	public:
 		std::map<std::shared_ptr<IGameObject>, std::vector<ActivePexInstance>> gameObjects;
-		std::map<std::string, NativeFunction> nativeStaticFunction;
-		std::map<std::string, std::vector<std::pair<std::string, NativeFunction>>> nativeFunction;
+		std::map<std::string, NativeFunction> nativeStaticFunctions;
+		std::map<std::string, std::vector<std::pair<std::string, NativeFunction>>> nativeFunctions;
 
 		std::vector<std::shared_ptr<PexScript>> allLoadedScripts;
 

@@ -13,7 +13,7 @@ struct PexScript;
 class IGameObject {
 public:
 	virtual ~IGameObject() = default; // Это просто надо запомнить. Необходимо т.к. наследуемся от этого класса
-	virtual const char* GetStringID() { return "Vitrual Realization"; };
+	virtual const char* GetStringID() { return "Vitrual Implementation"; };
 };
 
 enum class FunctionType {
@@ -202,12 +202,12 @@ struct FunctionInfo{
 	};
 
 	struct ParamInfo{
-		std::string name = "";
-		std::string type = "";
+		std::string name;
+		std::string type;
 	};
 
-	std::string	returnType = "";
-	std::string docstring = "";
+	std::string	returnType;
+	std::string docstring;
 	uint32_t	userFlags = 0;
 	uint8_t		flags = 0;
 
@@ -232,16 +232,16 @@ struct ObjectTable{
 
 	struct Object {
 
-		std::string NameIndex = "";
+		std::string NameIndex;
 
-		std::string parentClassName = "";
-		std::string docstring = "";
+		std::string parentClassName;
+		std::string docstring;
 		uint32_t	userFlags = 0;
-		std::string autoStateName = "";
+		std::string autoStateName;
 
 			struct VarInfo {
-				std::string		name = "";
-				std::string		typeName = "";
+				std::string		name;
+				std::string		typeName;
 				uint32_t		userFlags = 0;
 				VarValue		value = VarValue();
 			};
@@ -253,12 +253,12 @@ struct ObjectTable{
 					kFlags_AutoVar = 1 << 2,
 				};
 
-				std::string name = "";
-				std::string type = "";
-				std::string docstring = "";
+				std::string name;
+				std::string type;
+				std::string docstring;
 				uint32_t	userFlags = 0;
 				uint8_t		flags = 0;	// 1 and 2 are read/write
-				std::string autoVarName = "";
+				std::string autoVarName;
 
 				FunctionInfo	readHandler;
 				FunctionInfo	writeHandler;
@@ -267,11 +267,11 @@ struct ObjectTable{
 			struct StateInfo {
 
 				struct StateFunction {
-					std::string	name = "";
+					std::string	name;
 					FunctionInfo	function;
 				};
 
-				std::string name = "";
+				std::string name;
 
 				typedef std::vector <StateFunction>	FnTable;
 				FnTable	functions;
@@ -294,7 +294,7 @@ struct ObjectTable{
 struct UserFlagTable{
 	
 	struct UserFlag{
-		std::string	name = "";
+		std::string	name;
 		uint8_t		idx = 0;
 	};
 
@@ -307,9 +307,9 @@ struct DebugInfo{
 	uint64_t	m_sourceModificationTime = 0;
 
 	struct DebugFunction{
-		std::string objName = "";
-		std::string stateName = "";
-		std::string fnName = "";
+		std::string objName;
+		std::string stateName;
+		std::string fnName;
 		uint8_t	type = 0;	// 0-3 valid
 
 		std::vector <uint16_t>	lineNumbers;	// one per instruction
@@ -359,20 +359,19 @@ struct ActivePexInstance {
 	std::string childrenName;
 
 	std::shared_ptr<PexScript> sourcePex = nullptr;
-	VarValue linkObject = VarValue::None();
+	VarValue activeInstanceOwner = VarValue::None();
 	VirtualMachine *parentVM = nullptr;
 
 	std::shared_ptr<ActivePexInstance> parentInstance;
 
 	std::vector < ObjectTable::Object::VarInfo > variables;
 
-	std::vector<std::shared_ptr<VarValue>> identifiersValueName;
+	std::vector<std::shared_ptr<VarValue>> identifiersValueNameCache;
 	std::vector<std::shared_ptr<std::string>> instanceStringTable;
 
 	ActivePexInstance();
-	ActivePexInstance(std::shared_ptr<PexScript> sourcePex , VarForBuildActivePex mapForFillPropertys, VirtualMachine *parentVM , VarValue linkObject , std::string childsrenName);
+	ActivePexInstance(std::shared_ptr<PexScript> sourcePex , VarForBuildActivePex mapForFillPropertys, VirtualMachine *parentVM , VarValue activeInstanceOwner, std::string childsrenName);
 
-	FunctionInfo GetFunctionByName(const char* name);
 	FunctionInfo GetFunctionByName(const char* name, std::string stateName);
 
 	VarValue& GetVariableValueByName(std::vector<std::pair<std::string, VarValue>>& locals, std::string name);
@@ -382,23 +381,31 @@ struct ActivePexInstance {
 	VarValue CastToString(const VarValue& var);
 
 
-	VarValue StartFunction(FunctionInfo& function, std::vector<VarValue>& arguments, const char* namesr);
+	VarValue StartFunction(FunctionInfo& function, std::vector<VarValue>& arguments);
 
 
 	uint8_t GetTypeByName(std::string typeRef);
+	std::string GetActiveStateName();
 
 private:
+
+	ObjectTable::Object::PropInfo* GetProperty(ActivePexInstance *scriptInstance ,std::string nameProperty, uint8_t flag);
+
+	ActivePexInstance* GetActivePexInObject(VarValue &object, std::string &scriptType);
+
 	std::vector < ObjectTable::Object::VarInfo > FillVariables(std::shared_ptr<PexScript> sourcePex, std::vector<std::pair<std::string, VarValue>> argsForFillPropertys);
 
-	uint8_t GetTypeForValueArray(uint8_t type);
+	uint8_t GetArrayElementType(uint8_t type);
 
-	void CastObjectToObject(VarValue *object1 , VarValue *object2, std::vector<std::pair<std::string, VarValue>> &locals);
+	void CastObjectToObject(VarValue* result, VarValue* objectType, std::vector<std::pair<std::string, VarValue>> &locals);
 	
-	bool CheckParent(ActivePexInstance *object1, std::string castToTypeName);
-	bool CheckChildren(ActivePexInstance *object1, std::string castToTypeName);
+	bool HasParent(ActivePexInstance *script, std::string castToTypeName);
+	bool HasChild(ActivePexInstance *script, std::string castToTypeName);
 
-	std::shared_ptr<ActivePexInstance> FillParentInstanse(std::string nameNeedScript, VarValue LinkObject, VarForBuildActivePex mapForFillPropertys);
+	std::shared_ptr<ActivePexInstance> FillParentInstanse(std::string nameNeedScript, VarValue activeInstanceOwner, VarForBuildActivePex mapForFillPropertys);
 
 	VarValue GetElementsArrayAtString(const VarValue& array, uint8_t type);
+
+	
 
 };
