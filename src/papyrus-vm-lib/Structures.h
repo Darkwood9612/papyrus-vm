@@ -3,80 +3,43 @@
 #include <vector>
 #include <cassert>
 #include <iostream>
+#include <map>
+#include <functional>
 
-struct VMScript;
+
 class VirtualMachine;
+struct PexScript;
+
+class IGameObject {
+public:
+	virtual ~IGameObject() = default; // Это просто надо запомнить. Необходимо т.к. наследуемся от этого класса
+	virtual const char* GetStringID() { return "Vitrual Realization"; };
+};
+
+enum class FunctionType {
+	Method, // 'callmethod' opcode
+	GlobalFunction, // 'callstatic' opcode
+};
+
 struct VarValue {
 
-	VarValue() {
-		this->type = kType_String;
-		this->data.stringRef = 0;
-	}
+private:
 
-	static VarValue None() {
-		VarValue none;
-		none.type = kType_Object;
-		none.data.id = 0;
-		return none;
-	}
+	uint8_t	type = 0;
+	
 
-	explicit operator bool() const {
-		return this->CastToBool().data.b;
-	}
+	union {
+		IGameObject *id;
+		const char *string;
+		int32_t	i = 0;
+		float	f;
+		bool	b;
+	} data;
 
-	explicit operator int32_t() const {
-		return this->CastToInt().data.i;
-	}
+public:
+	std::string	objectType;
 
-	explicit operator float() const {
-		return this->CastToFloat().data.f;
-	}
-
-	explicit VarValue(uint8_t type) {
-		this->type = type;
-		switch (type){
-
-		case kType_Object:
-			this->data.id = 0;
-			break;
-		case kType_Identifier:
-			this->data.stringRef = 0;
-			break;
-		case kType_String:
-			this->data.stringRef = 0;
-			break;
-		case kType_Integer:
-			this->data.i = 0;
-			break;
-		case kType_Float:
-			this->data.f = 0.0f;
-			break;
-		case kType_Bool:
-			this->data.b = 0;
-			break;
-		case kType_StringArray:
-			
-			break;
-		case kType_IntArray:
-			
-			break;
-		case kType_FloatArray:
-			
-			break;
-		case kType_BoolArray:
-			
-			break;
-		case kType_ObjectArray:
-			
-			break;
-		default:
-			assert(false);
-			break;
-		}
-	}
-
-
-	enum{
+	enum valueTypes {
 		kType_Object = 0,		// 0 null?
 		kType_Identifier,	// 1 identifier
 		kType_String,		// 2
@@ -93,187 +56,90 @@ struct VarValue {
 		_ArraysEnd = 16,
 	};
 
-	uint8_t	type;
+	uint8_t GetType() const {
+		return this->type;
+	}
+
+	VarValue() {
+		this->type = 0;
+		this->data.id = nullptr;
+	}
+	
+	explicit VarValue(uint8_t type);
+	explicit VarValue(IGameObject *object);
+	explicit VarValue(int32_t value);
+	explicit VarValue(const char* value);
+	explicit VarValue(float value);
+	explicit VarValue(bool value);
+
+	VarValue::VarValue(uint8_t type, const char* value);
+
+	static VarValue None() {
+		return VarValue();
+	}
+
+	explicit operator bool() const {
+		return this->CastToBool().data.b;
+	}
+
+	explicit operator IGameObject*() const {
+		return this->data.id;
+	}
+
+	explicit operator int() const {
+		return this->CastToInt().data.i;
+	}
+
+	explicit operator float() const {
+		return this->CastToFloat().data.f;
+	}
+
+	explicit operator  const char* () const {
+		return this->data.string;
+	}
+
+	
+
+
 
 	std::shared_ptr<std::vector<VarValue>> pArray;
-	std::shared_ptr<VirtualMachine> linkObject;
 
-	union{
-		uint32_t id = 0;
-		uint16_t	stringRef;
-		uint16_t	stringRef2;
-		int32_t	i;
-		float	f;
-		bool	b;
-	} data;
 
-	VarValue operator + (const VarValue &argument2);
-	VarValue operator - (const VarValue &argument2);
-	VarValue operator * (const VarValue &argument2);
-	VarValue operator / (const VarValue &argument2);
-	VarValue  operator % (const VarValue &argument2);
-	VarValue  operator!();
+
+
+	VarValue operator + (const VarValue& argument2);
+	VarValue operator - (const VarValue& argument2);
+
+	VarValue operator * (const VarValue& argument2);
+	VarValue operator * (float value);
+	VarValue operator * (int value);
+
+	VarValue operator / (const VarValue& argument2);
+	VarValue operator % (const VarValue& argument2);
+	VarValue operator ! ();
+
 	VarValue& operator = (const VarValue& argument2);
-	VarValue& operator = (bool v);
 
-	bool operator == ( VarValue &argument2);
-	bool operator != ( VarValue &argument2);
-	bool operator > ( VarValue &argument2);
-	bool operator >= ( VarValue &argument2);
-	bool  operator < ( VarValue &argument2);
-	bool operator <= ( VarValue &argument2);
+	bool operator == (VarValue& argument2);
+	bool operator != (VarValue& argument2);
+	bool operator >  (VarValue& argument2);
+	bool operator >= (VarValue& argument2);
+	bool operator <  (VarValue& argument2);
+	bool operator <= (VarValue& argument2);
 
-	
-
-	 VarValue CastToInt() const {
-		VarValue var((uint8_t)kType_Integer);
-		
-		switch (this->type){
-
-		case kType_Object:
-			var.data.i = (uint32_t)this->data.id;
-			return var;
-		case kType_Identifier:
-			var.data.i = (uint32_t)this->data.stringRef;
-			return var;
-		case kType_Integer:
-			var.data.i = (uint32_t)this->data.i;
-			return var;
-		case kType_Float:
-			var.data.i = (uint32_t)this->data.f;
-			return var;
-		case kType_Bool:
-			var.data.i = (uint32_t)this->data.b;
-			return var;
-		default:
-			assert(false);
-			return var;
-		}
-	}
-
-	VarValue CastToFloat() const {
-		VarValue var((uint8_t)kType_Float);
-
-		switch (this->type) {
-
-		case kType_Object:
-			var.data.f = (float)this->data.id;
-			return var;
-		case kType_Identifier:
-			var.data.f = (float)this->data.stringRef;
-			return var;
-		case kType_Integer:
-			var.data.f = (float)this->data.i;
-			return var;
-		case kType_Float:
-			var.data.f = (float)this->data.f;
-			return var;
-		case kType_Bool:
-			var.data.f = (float)this->data.b;
-			return var;
-		default:
-			assert(false);
-			return var;
-		}
-	}
-	
-	VarValue CastToBool() const {
-		VarValue var((uint8_t)kType_Bool);
-
-		switch (this->type) {
-
-		case kType_Object:
-			var.data.b = (bool)this->data.id;
-			return var;
-		case kType_Identifier:
-			var.data.b = (bool)this->data.stringRef;
-			return var;
-		case kType_Integer:
-			var.data.b = (bool)this->data.i;
-			return var;
-		case kType_Float:
-			var.data.b = (bool)this->data.f;
-			return var;
-		case kType_Bool:
-			var.data.b = (bool)this->data.b;
-			return var;
-		default:
-			assert(false);
-			return var;
-		}
-	}
-
+	VarValue CastToInt()const;
+	VarValue CastToFloat()const;
+	VarValue CastToBool()const;
 };
 
-inline std::ostream& operator<<(std::ostream& os, VarValue& d) {
-	switch (d.type)
-	{
-	case VarValue::kType_Object:
-		return os << "Object:" << std::dec << (d.data.id);
-		
-	case VarValue::kType_Identifier:
-		return os << "Indetifier:" << std::dec << (d.data.stringRef);
-		
-	case VarValue::kType_String:
-		return os << "String:" << std::dec << (d.data.stringRef2);
-		
-	case VarValue::kType_Integer:
-		return os << "Int:" << std::dec << (d.data.i);
-		
-	case VarValue::kType_Float:
-		return os << "Float:" << std::dec << (d.data.f);
-		
-	case VarValue::kType_Bool:
-		return os << "Bool:" << std::dec << (d.data.b);
-	
-	case VarValue::kType_ObjectArray:
-		return os << "ObjectArray:"  << d.pArray;
 
-	case VarValue::kType_StringArray:
-		return os << "StringArray:" << d.pArray;
+using NativeFunction = std::function<VarValue(
+	VarValue self, // will be None for global functions
+	std::vector<VarValue> arguments
+)>;
 
-	case VarValue::kType_IntArray:
-		return os << "IntArray:" << d.pArray;
 
-	case VarValue::kType_FloatArray:
-		return os << "FloatArray:" << d.pArray;
-
-	case VarValue::kType_BoolArray:
-		return os << "BoolArray:" << d.pArray;
-
-	default:
-		assert(0);
-		return os;
-		break;
-	}
-}
-
-struct OpcodeContext {
-
-	static auto& GetEmptyLocals() {
-		static std::vector<std::pair<uint16_t, VarValue>> locals;
-		return locals;
-	}
-
-	static auto& GetEmptyArgs() {
-		static std::vector<VarValue> args;
-		return args;
-	}
-
-	OpcodeContext() : locals(GetEmptyLocals()) , args(GetEmptyArgs()) {
-		
-	}
-
-	OpcodeContext(std::vector<std::pair<uint16_t, VarValue>>& locals_, std::vector<VarValue>& args_) : locals(locals_), args(args_) {
-
-	}
-
-	std::vector<std::pair<uint16_t, VarValue>>& locals;
-	std::vector<VarValue>& args;
-
-	
-
-};
+using VarForBuildActivePex = std::map<std::string, std::vector<std::pair<std::string, VarValue>>>;
 
 struct FunctionCode{
 	enum{
@@ -326,8 +192,9 @@ struct FunctionCode{
 };
 
 struct FunctionInfo{
-	bool	valid = false;
 
+	bool valid = false;
+	
 
 	enum {
 		kFlags_Read = 1 << 0,
@@ -335,15 +202,14 @@ struct FunctionInfo{
 	};
 
 	struct ParamInfo{
-		uint16_t	name = 0;
-		uint16_t	type = 0;
- 
+		std::string name = "";
+		std::string type = "";
 	};
 
-	uint16_t	returnType = 0;
-	uint16_t	docstring = 0;
+	std::string	returnType = "";
+	std::string docstring = "";
 	uint32_t	userFlags = 0;
-	uint8_t	flags = 0;
+	uint8_t		flags = 0;
 
 	typedef std::vector <ParamInfo>	ParamTable;
 	ParamTable	params;
@@ -366,18 +232,18 @@ struct ObjectTable{
 
 	struct Object {
 
-		uint16_t	NameIndex;
+		std::string NameIndex = "";
 
-		uint16_t	parentClassName;
-		uint16_t	docstring;
-		uint32_t		userFlags;
-		uint16_t	autoStateName;
+		std::string parentClassName = "";
+		std::string docstring = "";
+		uint32_t	userFlags = 0;
+		std::string autoStateName = "";
 
 			struct VarInfo {
-				uint16_t		name;
-				uint16_t		typeName;
-				uint32_t		userFlags;
-				VarValue	value;
+				std::string		name = "";
+				std::string		typeName = "";
+				uint32_t		userFlags = 0;
+				VarValue		value = VarValue();
 			};
 
 			struct PropInfo {
@@ -387,12 +253,12 @@ struct ObjectTable{
 					kFlags_AutoVar = 1 << 2,
 				};
 
-				uint16_t	name;
-				uint16_t	type;
-				uint16_t	docstring;
-				uint32_t	userFlags;
-				uint8_t	flags;	// 1 and 2 are read/write
-				uint16_t	autoVarName;
+				std::string name = "";
+				std::string type = "";
+				std::string docstring = "";
+				uint32_t	userFlags = 0;
+				uint8_t		flags = 0;	// 1 and 2 are read/write
+				std::string autoVarName = "";
 
 				FunctionInfo	readHandler;
 				FunctionInfo	writeHandler;
@@ -401,11 +267,11 @@ struct ObjectTable{
 			struct StateInfo {
 
 				struct StateFunction {
-					uint16_t			name;
+					std::string	name = "";
 					FunctionInfo	function;
 				};
 
-				uint16_t	name;
+				std::string name = "";
 
 				typedef std::vector <StateFunction>	FnTable;
 				FnTable	functions;
@@ -428,8 +294,8 @@ struct ObjectTable{
 struct UserFlagTable{
 	
 	struct UserFlag{
-		uint16_t	name;
-		uint8_t	idx;
+		std::string	name = "";
+		uint8_t		idx = 0;
 	};
 
 	typedef std::vector <UserFlag>	Storage;
@@ -437,18 +303,18 @@ struct UserFlagTable{
 };
 
 struct DebugInfo{
-	uint8_t	m_flags;
-	uint64_t	m_sourceModificationTime;
+	uint8_t		m_flags = 0;
+	uint64_t	m_sourceModificationTime = 0;
 
 	struct DebugFunction{
-		uint16_t	objName;
-		uint16_t	stateName;
-		uint16_t	fnName;
-		uint8_t	type;	// 0-3 valid
+		std::string objName = "";
+		std::string stateName = "";
+		std::string fnName = "";
+		uint8_t	type = 0;	// 0-3 valid
 
 		std::vector <uint16_t>	lineNumbers;	// one per instruction
 
-		uint32_t	GetNumInstructions() { return lineNumbers.size(); }
+		size_t	GetNumInstructions() { return lineNumbers.size(); }
 	};
 
 	typedef std::vector <DebugFunction>	Storage;
@@ -468,14 +334,15 @@ struct ScriptHeader{
 		kGameID = 0x0001,
 	};
 
-	uint32_t	Signature;	// 00	FA57C0DE
-	uint8_t		VerMajor;	// 04	03
-	uint8_t		VerMinor;	// 05	01
-	uint16_t	GameID;		// 06	0001
-	uint64_t		BuildTime;	// 08	uint64_t
+	uint32_t	Signature = 0;	// 00	FA57C0DE
+	uint8_t		VerMajor = 0;	// 04	03
+	uint8_t		VerMinor = 0;	// 05	01
+	uint16_t	GameID = 0;		// 06	0001
+	uint64_t	BuildTime = 0;	// 08	uint64_t
 };
 
-struct VMScript{
+struct PexScript {
+	
 	ScriptHeader	header;
 	StringTable		stringTable;
 	DebugInfo		debugInfo;
@@ -484,5 +351,54 @@ struct VMScript{
 
 	std::string	source;
 	std::string	user;
-	std::string	machine;
+	std::string	machine;	
+};
+
+struct ActivePexInstance {
+	
+	std::string childrenName;
+
+	std::shared_ptr<PexScript> sourcePex = nullptr;
+	VarValue linkObject = VarValue::None();
+	VirtualMachine *parentVM = nullptr;
+
+	std::shared_ptr<ActivePexInstance> parentInstance;
+
+	std::vector < ObjectTable::Object::VarInfo > variables;
+
+	std::vector<std::shared_ptr<VarValue>> identifiersValueName;
+	std::vector<std::shared_ptr<std::string>> instanceStringTable;
+
+	ActivePexInstance();
+	ActivePexInstance(std::shared_ptr<PexScript> sourcePex , VarForBuildActivePex mapForFillPropertys, VirtualMachine *parentVM , VarValue linkObject , std::string childsrenName);
+
+	FunctionInfo GetFunctionByName(const char* name);
+	FunctionInfo GetFunctionByName(const char* name, std::string stateName);
+
+	VarValue& GetVariableValueByName(std::vector<std::pair<std::string, VarValue>>& locals, std::string name);
+
+	VarValue& GetIndentifierValue(std::vector<std::pair<std::string, VarValue>>& locals, VarValue& value);
+
+	VarValue CastToString(const VarValue& var);
+
+
+	VarValue StartFunction(FunctionInfo& function, std::vector<VarValue>& arguments, const char* namesr);
+
+
+	uint8_t GetTypeByName(std::string typeRef);
+
+private:
+	std::vector < ObjectTable::Object::VarInfo > FillVariables(std::shared_ptr<PexScript> sourcePex, std::vector<std::pair<std::string, VarValue>> argsForFillPropertys);
+
+	uint8_t GetTypeForValueArray(uint8_t type);
+
+	void CastObjectToObject(VarValue *object1 , VarValue *object2, std::vector<std::pair<std::string, VarValue>> &locals);
+	
+	bool CheckParent(ActivePexInstance *object1, std::string castToTypeName);
+	bool CheckChildren(ActivePexInstance *object1, std::string castToTypeName);
+
+	std::shared_ptr<ActivePexInstance> FillParentInstanse(std::string nameNeedScript, VarValue LinkObject, VarForBuildActivePex mapForFillPropertys);
+
+	VarValue GetElementsArrayAtString(const VarValue& array, uint8_t type);
+
 };

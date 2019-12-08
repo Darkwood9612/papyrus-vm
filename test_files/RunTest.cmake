@@ -10,6 +10,7 @@ execute_process(COMMAND "${SKYRIM_DIR}\\Papyrus Compiler\\PapyrusCompiler.exe"
 )
 
 if (NOT ${res} STREQUAL "0")
+  message(STATUS "Papyrus Compiler path is ${SKYRIM_DIR}\\Papyrus Compiler\\PapyrusCompiler.exe")
   message(FATAL_ERROR "PapyrusCompiler.exe failed with \n${res}")
 endif()
 
