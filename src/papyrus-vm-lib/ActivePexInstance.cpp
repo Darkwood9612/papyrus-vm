@@ -114,6 +114,58 @@ std::string ActivePexInstance::GetActiveStateName() {
 	return stateName;
 }
 
+ObjectTable::Object::PropInfo* ActivePexInstance::GetProperty(ActivePexInstance* scriptInstance, std::string nameProperty, uint8_t flag){
+
+	if (scriptInstance != nullptr) {
+
+		if (flag == ObjectTable::Object::PropInfo::kFlags_Read) {
+
+			for (auto& object : scriptInstance->sourcePex->objectTable.m_data) {
+				for (auto& prop : object.properties) {
+					if (prop.name == nameProperty && (prop.flags & 5) == prop.kFlags_Read) {
+						return &prop;
+					}
+				}
+			}
+		}
+
+
+		if (flag == ObjectTable::Object::PropInfo::kFlags_Write) {
+
+			for (auto& object : scriptInstance->sourcePex->objectTable.m_data) {
+				for (auto& prop : object.properties) {
+					if (prop.name == nameProperty && (prop.flags & 6) == prop.kFlags_Write) {
+						return &prop;
+					}
+				}
+			}
+		}
+
+
+	}
+
+	return nullptr;
+}
+
+ActivePexInstance* ActivePexInstance::GetActivePexInObject(VarValue* object, std::string& scriptType){
+
+	auto itObject = std::find_if(parentVM->gameObjects.begin(), parentVM->gameObjects.end(), [&](std::pair<std::shared_ptr<IGameObject>, std::vector<ActivePexInstance>>i) {
+		return ((IGameObject*)object == i.first.get());
+		});
+
+	if (itObject != parentVM->gameObjects.end()) {
+
+		for (auto& instance : itObject->second) {
+			if (instance.sourcePex->source == scriptType) {
+				return &instance;
+				break;
+			}
+		}
+	}
+
+	return nullptr;
+}
+
 VarValue ActivePexInstance::CastToString(const VarValue& var) {
 	std::string temp;
 	size_t _size = this->sourcePex->stringTable.m_data.size();
@@ -501,34 +553,9 @@ VarValue ActivePexInstance::StartFunction(FunctionInfo& function, std::vector<Va
 
 				std::string nameProperty = (const char*)*opCode[line].second[0];
 
-				auto object = std::find_if(parentVM->gameObjects.begin(), parentVM->gameObjects.end(), [&](std::pair<std::shared_ptr<IGameObject>, std::vector<ActivePexInstance>>i) {
-					return ((IGameObject*)*opCode[line].second[1] == i.first.get());
-					});
+				ActivePexInstance* ptrPex = GetActivePexInObject(opCode[line].second[1], opCode[line].second[1]->objectType);
 
-				ActivePexInstance* ptrPex = nullptr;
-
-				if (object != parentVM->gameObjects.end()) {
-
-					for (auto &instance : object->second) {
-						if (instance.sourcePex->source == opCode[line].second[1]->objectType) {
-							ptrPex = &instance;
-							break;
-						}
-					}
-				}
-
-				ObjectTable::Object::PropInfo* runProperty = nullptr;
-
-				if (ptrPex != nullptr) {
-					for (auto& object : ptrPex->sourcePex->objectTable.m_data) {
-						for (auto& prop : object.properties) {
-							if (prop.name == nameProperty && (prop.flags & 5) == prop.kFlags_Read) {
-								runProperty = &prop;
-								break;
-							}
-						}
-					}
-				}
+				ObjectTable::Object::PropInfo* runProperty = GetProperty(ptrPex, nameProperty, ObjectTable::Object::PropInfo::kFlags_Read);
 
 				if (runProperty != nullptr) {
 					*opCode[line].second[2] = ptrPex->StartFunction(runProperty->readHandler,  argsForCall);
@@ -545,37 +572,12 @@ VarValue ActivePexInstance::StartFunction(FunctionInfo& function, std::vector<Va
 
 				std::string nameProperty = (const char*)*opCode[line].second[0];
 
-				auto object = std::find_if(parentVM->gameObjects.begin(), parentVM->gameObjects.end(), [&](std::pair<std::shared_ptr<IGameObject>, std::vector<ActivePexInstance>>i) {
-					return ((IGameObject*)*opCode[line].second[1] == i.first.get());
-					});
+				ActivePexInstance * ptrPex = GetActivePexInObject(opCode[line].second[1], opCode[line].second[1]->objectType);
 
-				ActivePexInstance * ptrPex = nullptr;
-
-				if (object != parentVM->gameObjects.end()) {
-
-					for (auto &instance : object->second) {
-						if (instance.sourcePex->source == opCode[line].second[1]->objectType) {
-							ptrPex = &instance;
-							break;
-						}
-					}
-				}
-
-				ObjectTable::Object::PropInfo* runProperty = nullptr;
-
-				if (ptrPex != nullptr) {
-					for (auto& object : ptrPex->sourcePex->objectTable.m_data) {
-						for (auto& prop : object.properties) {
-							if (prop.name == nameProperty && (prop.flags & 6) == prop.kFlags_Write) {
-								runProperty = &prop;
-								break;
-							}
-						}
-					}
-				}
+				ObjectTable::Object::PropInfo* runProperty = GetProperty(ptrPex, nameProperty, ObjectTable::Object::PropInfo::kFlags_Write);
 
 				if (runProperty != nullptr) {
-					ptrPex->StartFunction(runProperty->writeHandler, argsForCall);
+					 ptrPex->StartFunction(runProperty->writeHandler, argsForCall);
 				}
 
 			}

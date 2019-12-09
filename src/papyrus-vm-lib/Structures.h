@@ -391,7 +391,7 @@ private:
 
 	ObjectTable::Object::PropInfo* GetProperty(ActivePexInstance *scriptInstance ,std::string nameProperty, uint8_t flag);
 
-	ActivePexInstance* GetActivePexInObject(VarValue &object, std::string &scriptType);
+	ActivePexInstance* GetActivePexInObject(VarValue* object, std::string &scriptType);
 
 	std::vector < ObjectTable::Object::VarInfo > FillVariables(std::shared_ptr<PexScript> sourcePex, std::vector<std::pair<std::string, VarValue>> argsForFillPropertys);
 
