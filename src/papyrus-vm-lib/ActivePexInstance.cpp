@@ -1,6 +1,7 @@
 #include "OpcodesImplementation.h"
 #include <algorithm>
 #include <functional>
+#include <cctype> // tolower
 #include "VirtualMachine.h"
 
 
@@ -668,7 +669,7 @@ VarValue& ActivePexInstance::GetIndentifierValue(std::vector<std::pair<std::stri
 
 uint8_t ActivePexInstance::GetTypeByName(std::string typeRef){
 
-	std::transform(typeRef.begin(), typeRef.end(), typeRef.begin(), std::tolower);
+	std::transform(typeRef.begin(), typeRef.end(), typeRef.begin(), tolower);
 
 	if (typeRef == "int") {
 		return VarValue::kType_Integer;
