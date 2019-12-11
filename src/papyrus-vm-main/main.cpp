@@ -3,30 +3,46 @@
 #include <cstdint>
 #include <ctime>
 
+
+#define _SILENCE_EXPERIMENTAL_FILESYSTEM_DEPRECATION_WARNING 
+ 
+#include <experimental/filesystem>
+#include <iterator>
+
+
+namespace fs = std::experimental::filesystem;
+
 int main(int argc, char *argv[]) {
 
-	std::string pexPath = "E:\\WorkSkyMP\\papyrus-vm-build\\pex\\OpcodesTest.pex";
+	std::vector<std::string> allPath;
+	std::vector<fs::path> pexFiles;
 
-	std::string pexPathForm = "E:\\WorkSkyMP\\papyrus-vm-build\\pex\\TestObject.pex";
+	const fs::path pathTo = fs::current_path();
+	fs::directory_iterator begin("pex");
+	fs::directory_iterator end;
+	
+	std::copy_if(begin, end, std::back_inserter(pexFiles), [](const fs::path& path) {
+		return fs::is_regular_file(path) && (path.extension() == ".pex");
+		});
+
+	for (auto file : pexFiles) { allPath.push_back( fs::absolute(file).generic_string() ); }
+
 
 
 	try {
-		constexpr int n = 2;
 
-		if (argc < n) {
-
-		}	// Path to a compiled script file (including '.pex' suffix)
-		else
-			//pexPath = argv[1];		// Path to a compiled script file (including '.pex' suffix)
+		//pexPath = argv[1];						// Path to a compiled script file (including '.pex' suffix)
 		const std::string pathToExe = argv[0];		// i.e. 'C:/papyrus-vm-main.exe' // We can ignore it
 
-		std::vector<std::string> allPath = { pexPath , pexPathForm };
+		
 
 		Reader reader(allPath);
 
 		std::vector<std::shared_ptr<PexScript>> vector = reader.GetSourceStructures();
 
 		VirtualMachine vm(vector);
+
+
 
 		std::shared_ptr<int> assertId(new int(1));
 		vm.RegisterFunction( "", "Print", FunctionType::GlobalFunction, [=](VarValue self, const std::vector<VarValue> args) {
@@ -51,6 +67,8 @@ int main(int argc, char *argv[]) {
 			return VarValue::None();
 		});
 
+
+
 		class TestObject : public IGameObject {
 			const std::string  MY_ID = "0x006AFF2E";
 
@@ -59,10 +77,6 @@ int main(int argc, char *argv[]) {
 		};
 
 		std::shared_ptr<IGameObject> testObject(new TestObject);
-
-
-
-
 
 
 
