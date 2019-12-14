@@ -1,4 +1,4 @@
- Scriptname OpcodesTest extends TestObject
+ Scriptname OpcodesTest extends _TestObject
 
 function Assert(Bool v) native global
 function Print(String s) native global
@@ -27,7 +27,7 @@ Int valueToAssign = 10
 ; Variables For Array Test
 Int[] _array
 
-TestObject Property TestObjectRef Auto
+_TestObject Property _TestObjectRef Auto
 OpcodesTest Property OpcodeRef Auto
 
 State FirstState
@@ -358,8 +358,8 @@ Assert(True == !emptyString)
 
 Assert(False == !OpcodeRef)
 Assert(True == OpcodeRef)
-TestObject strFormId = OpcodeRef as TestObject
-Print(" TestObject id = " + strFormId)
+_TestObject strFormId = OpcodeRef as _TestObject
+Print(" _TestObject id = " + strFormId)
 
 Print(" End Cast Test!")
 EndFunction
@@ -383,13 +383,13 @@ EndFunction
 Function PropertyTest()
   Print(" Start Property Test!")
 
-  Int resultat = TestObjectRef.parentProperty
+  Int resultat = _TestObjectRef.parentProperty
 
   Assert(resultat == 0)
 
-  TestObjectRef.parentProperty = 15
+  _TestObjectRef.parentProperty = 15
 
-  resultat = TestObjectRef.parentProperty
+  resultat = _TestObjectRef.parentProperty
 
    Assert(resultat == 15)
 
