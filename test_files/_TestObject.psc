@@ -1,4 +1,4 @@
- Scriptname TestObject
+ Scriptname _TestObject
 
 Float Function ReturbBackValue(Float value)
   Return value
